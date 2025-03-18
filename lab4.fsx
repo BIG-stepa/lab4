@@ -25,23 +25,29 @@ let rec map (f: float -> float) (tree: BinaryTree) =
     | Node (value, left, right) -> Node (f value, map f left, map f right)
     | Empty -> Empty
 
-// Функция fold для обхода бинарного дерева
-let rec fold (f: 'a -> BinaryTree -> 'a) (acc: 'a) (tree: BinaryTree) =
+let rec fold (f: 'a -> float -> 'a) (acc: 'a) (tree: BinaryTree) =
     match tree with
     | Empty -> acc
     | Node (value, left, right) ->
+        // Сначала обходим левое поддерево
         let accLeft = fold f acc left
-        let accCurrent = f accLeft tree
+        // Затем проверяем текущий узел
+        let accCurrent = f accLeft value
+        // Обходим правое поддерево
         fold f accCurrent right
 
 // Функция для сбора листьев с использованием fold
 let collectLeaves (tree: BinaryTree) =
-    fold (fun acc currentTree ->
-        match currentTree with
-        | Node (value, Empty, Empty) -> value :: acc // Лист, если нет потомков
-        | _ -> acc
-    ) [] tree |> List.rev
-
+    let rec foldLeaves (acc: float list) (tree: BinaryTree) =
+        match tree with
+        | Empty -> acc
+        | Node (value, Empty, Empty) -> value :: acc // Если это лист, добавляем значение в аккумулятор
+        | Node (_, left, right) ->
+            // Обходим левое и правое поддеревья
+            let accLeft = foldLeaves acc left
+            foldLeaves accLeft right
+    foldLeaves [] tree |> List.rev
+    
 // Функция для вставки значения в дерево
 let rec insert tree value =
     match tree with
@@ -52,17 +58,18 @@ let rec insert tree value =
         elif value > v then
             Node (v, left, insert right value)
         else
-            // Если значение уже существует в дереве, не добавляем его снова
             tree
-
+            
 // Функция для ввода дерева
-let rec inputTree () =
-    printfn "Введите значение узла (или 'stop' для завершения ввода):"
-    match checkFloat "" with
-    | Some value ->
-        insert (inputTree ()) value
-    | None ->
-        Empty // Если введено "stop", возвращаем пустое дерево
+let inputTree () =
+    let rec loop tree =
+        printfn "Введите значение узла (или 'stop' для завершения ввода):"
+        match checkFloat "" with
+        | Some value ->
+            loop (insert tree value)
+        | None ->
+            tree // Если введено "stop", возвращаем дерево
+    loop Empty
 
 // Функция для отбрасывания дробной части
 let truncateFloat (x: float) = int x |> float
